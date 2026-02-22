@@ -1,1 +1,25 @@
 @import "tailwindcss";
+
+@layer base {
+    body {
+        @apply bg-slate-50 text-slate-900;
+    }
+}
+
+@layer utilities {
+    .glass-white {
+        @apply bg-white/70 backdrop-blur-md border border-white/20;
+    }
+}
+
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    @apply bg-slate-100;
+}
+
+::-webkit-scrollbar-thumb {
+    @apply bg-blue-200 rounded-full hover:bg-blue-300 transition-colors;
+}

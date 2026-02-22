@@ -1,8 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { User, Users, Info, ShieldCheck, Activity, Target, ArrowLeft, ArrowRight, Copy, Play, UserPlus, Settings2, CheckCircle2, BarChart2, HelpCircle } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  User, Users, Info, ShieldCheck, Activity, Target, 
+  ArrowLeft, ArrowRight, Copy, Play, UserPlus, 
+  Settings2, CheckCircle2, BarChart2, HelpCircle,
+  TrendingUp, TrendingDown, Minus, Zap, RefreshCw,
+  Trophy, Mail, ExternalLink, Shield, ChevronRight,
+  ClipboardList, Check
+} from 'lucide-react';
+import { mockScenarios, Scenario, Decision } from './data/mockScenarios';
+import TradingViewChart from './components/TradingViewChart';
 
-type Screen = "home" | "enterName" | "multiplayerLobby" | "soloSettings";
+type Screen = "home" | "enterName" | "multiplayerLobby" | "soloSettings" | "game" | "apexExplanation" | "results";
 type Mode = "solo" | "multiplayer" | null;
 type Player = { id: string; name: string; isHost: boolean };
 
@@ -18,16 +27,70 @@ type PlayerVotes = {
   [playerId: string]: GameSettings;
 };
 
-const difficultyLabels: Record<Difficulty, string> = {
+const DIFFICULTY_LABELS: Record<Difficulty, string> = {
   beginner: "Débutant",
   intermediate: "Intermédiaire",
   expert: "Expert"
 };
 
-const contentTypeLabels: Record<ContentType, string> = {
+const CONTENT_TYPE_LABELS: Record<ContentType, string> = {
   charts: "Graphiques TradingView",
-  quiz: "Questions simples"
+  quiz: "Quiz Interactif"
 };
+
+function SettingButton({ label, isSelected, onClick }: { label: string, isSelected: boolean, onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`px-6 py-4 rounded-xl text-lg font-bold transition-all duration-200 border-2 ${
+        isSelected 
+          ? 'bg-blue-600 text-white border-blue-600 shadow-lg shadow-blue-500/20' 
+          : 'bg-white text-slate-600 border-slate-200 hover:border-blue-300'
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function PillButton({ label, isActive, onClick }: { label: string, isActive: boolean, onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex-1 px-8 py-5 rounded-2xl text-xl font-bold transition-all duration-300 border-2 ${
+        isActive 
+          ? 'bg-blue-600 border-blue-600 text-white shadow-xl shadow-blue-500/20' 
+          : 'bg-white border-slate-200 text-slate-500 hover:border-blue-400 hover:text-blue-600'
+      }`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function CardButton({ icon: Icon, title, description, isActive, onClick }: { icon?: any, title: string, description: string, isActive: boolean, onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`relative p-8 rounded-3xl border-2 transition-all duration-300 text-left overflow-hidden ${
+        isActive 
+          ? 'bg-blue-50 border-blue-600 shadow-lg' 
+          : 'bg-white border-slate-200 hover:border-blue-300'
+      }`}
+    >
+      <div className="flex flex-col h-full relative z-10">
+        {Icon && <Icon className={`w-10 h-10 mb-6 transition-colors ${isActive ? 'text-blue-600' : 'text-slate-400'}`} />}
+        <h4 className={`text-2xl font-bold mb-3 transition-colors ${isActive ? 'text-blue-900' : 'text-slate-700'}`}>{title}</h4>
+        <p className={`text-lg leading-relaxed ${isActive ? 'text-blue-700/80' : 'text-slate-500'}`}>{description}</p>
+      </div>
+      {isActive && (
+        <div className="absolute bottom-4 right-4 bg-blue-600 text-white p-2 rounded-full shadow-lg">
+          <Check className="w-5 h-5" />
+        </div>
+      )}
+    </button>
+  );
+}
 
 function EnterNameScreen({ mode, onBack, onSubmit }: { mode: Mode, onBack: () => void, onSubmit: (name: string) => void }) {
   const [name, setName] = useState("");
@@ -38,503 +101,456 @@ function EnterNameScreen({ mode, onBack, onSubmit }: { mode: Mode, onBack: () =>
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && isValid) {
-      handleSubmit();
-    }
+    if (e.key === 'Enter' && isValid) handleSubmit();
   };
 
   return (
     <motion.div 
-      key="enterName"
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.4 }}
-      className="flex flex-col items-center justify-center flex-1 w-full p-6 relative z-10"
+      className="max-w-xl w-full mx-auto bg-white p-10 md:p-14 rounded-[3rem] border border-slate-200 shadow-2xl space-y-12"
     >
-      <div className="absolute top-8 left-8 md:top-12 md:left-12">
-        <button 
-          onClick={onBack}
-          className="flex items-center gap-3 text-slate-400 hover:text-emerald-400 transition-colors duration-200 text-xl font-medium px-4 py-2 rounded-xl hover:bg-slate-800/50 active:bg-slate-800"
-        >
-          <ArrowLeft className="w-6 h-6" />
-          Retour
-        </button>
+      <button 
+        onClick={onBack}
+        className="flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-colors font-bold uppercase tracking-widest text-sm"
+      >
+        <ArrowLeft className="w-5 h-5" />
+        Retour
+      </button>
+
+      <div className="space-y-4">
+        <h2 className="text-5xl md:text-6xl font-black text-blue-900 leading-none">Votre Identité</h2>
+        <p className="text-xl text-slate-500">Comment Apex doit-il vous appeler ?</p>
       </div>
 
-      <div className="w-full max-w-2xl bg-slate-800/40 border border-slate-700 rounded-3xl p-8 md:p-12 backdrop-blur-sm shadow-2xl">
-        <div className="text-center space-y-4 mb-10">
-          <h2 className="text-3xl md:text-4xl font-bold text-white">
-            {mode === 'solo' ? 'Mode Solo : entrez votre nom' : 'Mode Multijoueur : entrez votre nom'}
-          </h2>
-          <p className="text-xl text-slate-400">
-            Ce nom sera affiché sur le tableau des scores.
-          </p>
-        </div>
-
-        <div className="space-y-8">
-          <input
-            type="text"
+      <div className="space-y-6">
+        <div className="relative group">
+          <User className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+          <input 
+            autoFocus
+            type="text" 
+            placeholder="Ex: Alexander Elder"
             value={name}
             onChange={(e) => setName(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Votre prénom ou pseudo"
-            className="w-full bg-slate-900/80 border-2 border-slate-600 focus:border-emerald-500 rounded-2xl px-6 py-6 text-2xl text-white placeholder-slate-500 outline-none transition-all duration-300 focus:shadow-[0_0_20px_rgba(16,185,129,0.2)]"
-            autoFocus
+            className="w-full bg-slate-50 border-2 border-slate-100 focus:border-blue-500 focus:bg-white text-slate-900 px-16 py-6 rounded-2xl text-2xl font-bold outline-none transition-all placeholder:text-slate-300"
           />
-
-          <button
-            onClick={handleSubmit}
-            disabled={!isValid}
-            className="w-full flex items-center justify-center gap-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:border-slate-700 disabled:cursor-not-allowed text-white text-2xl font-bold py-6 rounded-2xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] border border-transparent"
-          >
-            Continuer
-            <ArrowRight className="w-8 h-8" />
-          </button>
         </div>
-      </div>
 
-      <div className="absolute bottom-8 text-center px-6 w-full">
-        <p className="text-slate-500 text-sm md:text-base max-w-2xl mx-auto">
-          Apex privilégie la qualité des trades plutôt que la fréquence et sait quand ne pas agir pour protéger le capital.
-        </p>
+        <button 
+          onClick={handleSubmit}
+          disabled={!isValid}
+          className="w-full group py-6 rounded-2xl bg-blue-600 hover:bg-blue-700 disabled:bg-slate-200 text-white text-2xl font-black transition-all flex items-center justify-center gap-3 shadow-xl shadow-blue-600/20 disabled:shadow-none"
+        >
+          {mode === "solo" ? "Lancer Apex" : "Rejoindre le salon"}
+          <ArrowRight className="w-8 h-8 group-hover:translate-x-1 transition-transform" />
+        </button>
       </div>
     </motion.div>
   );
 }
 
-function SoloSettingsScreen({
-  playerName,
-  gameSettings,
-  onUpdateSettings,
-  onStartSolo,
-  onBack
-}: {
-  playerName: string,
-  gameSettings: GameSettings,
-  onUpdateSettings: (settings: GameSettings) => void,
-  onStartSolo: () => void,
-  onBack: () => void
-}) {
-  const handleUpdate = (partial: Partial<GameSettings>) => {
-    onUpdateSettings({ ...gameSettings, ...partial });
+function SoloSettingsScreen({ playerName, gameSettings, onUpdateSettings, onStartSolo, onBack }: { playerName: string, gameSettings: GameSettings, onUpdateSettings: (s: GameSettings) => void, onStartSolo: () => void, onBack: () => void }) {
+  const handleUpdate = (update: Partial<GameSettings>) => {
+    onUpdateSettings({ ...gameSettings, ...update });
   };
-
-  const PillButton = ({ label, isActive, onClick }: { label: string, isActive: boolean, onClick: () => void }) => (
-    <button
-      onClick={onClick}
-      className={`px-6 py-4 rounded-2xl font-semibold transition-all duration-200 flex-1 text-center text-lg ${
-        isActive 
-          ? 'bg-emerald-500 text-slate-900 shadow-[0_0_15px_rgba(16,185,129,0.4)] scale-[1.02] border-transparent' 
-          : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700'
-      }`}
-    >
-      {label}
-    </button>
-  );
-
-  const CardButton = ({ title, description, isActive, onClick, icon: Icon }: { title: string, description: string, isActive: boolean, onClick: () => void, icon?: React.ElementType }) => (
-    <button
-      onClick={onClick}
-      className={`p-6 rounded-2xl text-left transition-all duration-200 flex-1 border relative overflow-hidden group ${
-        isActive 
-          ? 'bg-emerald-900/20 border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.15)]' 
-          : 'bg-slate-800/50 border-slate-700 hover:bg-slate-800 hover:border-slate-500'
-      }`}
-    >
-      {isActive && <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/10 to-transparent pointer-events-none" />}
-      <div className="relative z-10 flex flex-col h-full">
-        <div className="flex items-center gap-3 mb-2">
-          {Icon && <Icon className={`w-6 h-6 ${isActive ? 'text-emerald-400' : 'text-slate-400 group-hover:text-slate-300'}`} />}
-          <h4 className={`text-xl font-bold ${isActive ? 'text-emerald-400' : 'text-slate-200 group-hover:text-white'}`}>
-            {title}
-          </h4>
-        </div>
-        <p className={`text-base mt-2 ${isActive ? 'text-emerald-100/80' : 'text-slate-400 group-hover:text-slate-300'}`}>
-          {description}
-        </p>
-      </div>
-    </button>
-  );
 
   return (
     <motion.div 
-      key="soloSettings"
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.4 }}
-      className="flex flex-col items-center flex-1 w-full p-6 relative z-10 overflow-y-auto"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -20 }}
+      className="w-full flex flex-col items-center space-y-16 py-12"
     >
-      <div className="w-full max-w-5xl flex justify-between items-center mb-8 mt-4">
-        <button 
-          onClick={onBack}
-          className="flex items-center gap-3 text-slate-400 hover:text-emerald-400 transition-colors duration-200 text-xl font-medium px-4 py-2 rounded-xl hover:bg-slate-800/50 active:bg-slate-800"
-        >
-          <ArrowLeft className="w-6 h-6" />
-          Retour
-        </button>
+      <button 
+        onClick={onBack}
+        className="flex items-center gap-2 text-slate-500 hover:text-blue-600 transition-colors font-bold uppercase tracking-widest text-sm"
+      >
+        <ArrowLeft className="w-5 h-5" />
+        Retour
+      </button>
+
+      <div className="flex flex-col items-center text-center space-y-4">
+        <h2 className="text-5xl md:text-6xl font-black text-blue-900 leading-tight">Configuration <span className="text-blue-600">Solo</span></h2>
+        <p className="text-xl text-slate-500 max-w-lg">Préparez votre entraînement, {playerName}.</p>
       </div>
 
-      <div className="w-full max-w-5xl bg-slate-800/40 border border-slate-700 rounded-3xl p-8 md:p-12 backdrop-blur-sm shadow-2xl mb-8">
-        <div className="text-center space-y-4 mb-12">
-          <h2 className="text-4xl md:text-5xl font-bold text-white">
-            Paramètres de votre partie solo
-          </h2>
-          <p className="text-xl text-slate-400">
-            Bonjour, <span className="text-emerald-400 font-semibold">{playerName}</span> 👋 Configurez votre session de jeu, puis comparez vos décisions à celles d'Apex.
-          </p>
-        </div>
-
-        <div className="space-y-12">
-          {/* Scenarios Count */}
-          <div className="space-y-4">
-            <h3 className="text-2xl font-semibold text-white flex items-center gap-3">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-700 text-sm font-bold">1</span>
-              Combien de scénarios souhaitez-vous jouer ?
-            </h3>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <PillButton label="5 scénarios" isActive={gameSettings.scenariosCount === 5} onClick={() => handleUpdate({ scenariosCount: 5 })} />
-              <PillButton label="10 scénarios" isActive={gameSettings.scenariosCount === 10} onClick={() => handleUpdate({ scenariosCount: 10 })} />
-              <PillButton label="20 scénarios" isActive={gameSettings.scenariosCount === 20} onClick={() => handleUpdate({ scenariosCount: 20 })} />
-            </div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-6xl">
+        {/* Scenarios Count */}
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-8">
+          <div className="flex items-center gap-4 text-blue-600">
+            <ClipboardList className="w-8 h-8" />
+            <h3 className="text-xl font-bold uppercase tracking-wider">Scénarios</h3>
           </div>
-
-          {/* Difficulty */}
-          <div className="space-y-4">
-            <h3 className="text-2xl font-semibold text-white flex items-center gap-3">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-700 text-sm font-bold">2</span>
-              Choisissez votre niveau
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <CardButton 
-                title="Débutant" 
-                description="Scénarios clairs, explications très pédagogiques." 
-                isActive={gameSettings.difficulty === "beginner"} 
-                onClick={() => handleUpdate({ difficulty: "beginner" })} 
+          <div className="grid grid-cols-1 gap-3">
+            {[5, 10, 20].map(count => (
+              <SettingButton 
+                key={count}
+                label={`${count} Scénarios`}
+                isSelected={gameSettings.scenariosCount === count}
+                onClick={() => handleUpdate({ scenariosCount: count as 5|10|20})}
               />
-              <CardButton 
-                title="Intermédiaire" 
-                description="Plus de volatilité et de zones d'incertitude." 
-                isActive={gameSettings.difficulty === "intermediate"} 
-                onClick={() => handleUpdate({ difficulty: "intermediate" })} 
-              />
-              <CardButton 
-                title="Expert" 
-                description="Situations complexes, discipline d'Apex mise en avant." 
-                isActive={gameSettings.difficulty === "expert"} 
-                onClick={() => handleUpdate({ difficulty: "expert" })} 
-              />
-            </div>
-          </div>
-
-          {/* Content Type */}
-          <div className="space-y-4">
-            <h3 className="text-2xl font-semibold text-white flex items-center gap-3">
-              <span className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-700 text-sm font-bold">3</span>
-              Type de contenu
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <CardButton 
-                icon={BarChart2}
-                title="Graphiques TradingView" 
-                description="Analysez de vrais graphiques et prédisez le mouvement." 
-                isActive={gameSettings.contentType === "charts"} 
-                onClick={() => handleUpdate({ contentType: "charts" })} 
-              />
-              <CardButton 
-                icon={HelpCircle}
-                title="Questions simples en trading" 
-                description="Quiz courts pour découvrir les principes d'Apex." 
-                isActive={gameSettings.contentType === "quiz"} 
-                onClick={() => handleUpdate({ contentType: "quiz" })} 
-              />
-            </div>
+            ))}
           </div>
         </div>
 
-        {/* Summary & Start */}
-        <div className="mt-12 pt-10 border-t border-slate-700/50">
-          <div className="bg-emerald-900/20 border border-emerald-500/30 rounded-2xl p-6 mb-8 flex items-center gap-4">
-            <CheckCircle2 className="w-8 h-8 text-emerald-400 shrink-0" />
-            <div>
-              <p className="text-slate-300 text-lg">
-                Vous allez jouer : <strong className="text-white">{gameSettings.scenariosCount} scénarios</strong> - Niveau <strong className="text-white">{difficultyLabels[gameSettings.difficulty]}</strong> - <strong className="text-white">{contentTypeLabels[gameSettings.contentType]}</strong>
-              </p>
-            </div>
+        {/* Difficulty */}
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-8">
+          <div className="flex items-center gap-4 text-blue-600">
+            <Target className="w-8 h-8" />
+            <h3 className="text-xl font-bold uppercase tracking-wider">Difficulté</h3>
           </div>
+          <div className="grid grid-cols-1 gap-3">
+            {(["beginner", "intermediate", "expert"] as const).map(diff => (
+              <SettingButton 
+                key={diff}
+                label={DIFFICULTY_LABELS[diff]}
+                isSelected={gameSettings.difficulty === diff}
+                onClick={() => handleUpdate({ difficulty: diff})}
+              />
+            ))}
+          </div>
+        </div>
 
-          <button
-            onClick={onStartSolo}
-            className="w-full flex items-center justify-center gap-3 bg-emerald-600 hover:bg-emerald-500 text-white text-2xl font-bold py-8 rounded-3xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] border border-transparent shadow-xl shadow-emerald-900/20"
-          >
-            <Play className="w-8 h-8" />
-            Lancer la partie solo
-          </button>
+        {/* Content Type */}
+        <div className="bg-white p-8 rounded-[2.5rem] border border-slate-200 shadow-sm space-y-8">
+          <div className="flex items-center gap-4 text-blue-600">
+            <Trophy className="w-8 h-8" />
+            <h3 className="text-xl font-bold uppercase tracking-wider">Contenu</h3>
+          </div>
+          <div className="grid grid-cols-1 gap-3">
+            {(["charts", "quiz"] as const).map(type => (
+              <SettingButton 
+                key={type}
+                label={CONTENT_TYPE_LABELS[type]}
+                isSelected={gameSettings.contentType === type}
+                onClick={() => handleUpdate({ contentType: type})}
+              />
+            ))}
+          </div>
         </div>
       </div>
 
-      <div className="text-center px-6 w-full pb-8">
-        <p className="text-slate-500 text-sm md:text-base max-w-3xl mx-auto">
-          Apex orchestre plusieurs réseaux spécialisés (tendance, momentum, structure) et sait quand ne pas agir pour préserver le capital.
-        </p>
-      </div>
+      <button
+        onClick={onStartSolo}
+        className="group px-16 py-8 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-3xl font-black transition-all duration-300 shadow-2xl shadow-blue-600/30 flex items-center gap-6 hover:scale-105"
+      >
+        Lancer la partie solo
+        <ChevronRight className="w-10 h-10 group-hover:translate-x-2 transition-transform" />
+      </button>
     </motion.div>
   );
 }
 
 function MultiplayerLobbyScreen({ 
-  roomCode, 
-  players, 
-  playerName,
-  currentPlayerId,
-  gameSettings,
-  votes,
-  onUpdateVote,
-  onLockSettings,
-  onBack, 
-  onSimulateGuest 
+  roomCode, players, playerName, currentPlayerId, gameSettings, votes, onUpdateVote, onLockSettings, onBack, onSimulateGuest 
 }: { 
-  roomCode: string, 
-  players: Player[], 
-  playerName: string,
-  currentPlayerId: string,
-  gameSettings: GameSettings,
-  votes: PlayerVotes,
-  onUpdateVote: (playerId: string, vote: GameSettings) => void,
-  onLockSettings: (settings: GameSettings) => void,
-  onBack: () => void,
-  onSimulateGuest: () => void
+  roomCode: string, players: Player[], playerName: string, currentPlayerId: string, gameSettings: GameSettings, votes: PlayerVotes, onUpdateVote: (playerId: string, vote: GameSettings) => void, onLockSettings: (settings: GameSettings) => void, onBack: () => void, onSimulateGuest: () => void 
 }) {
   const [tipIndex, setTipIndex] = useState(0);
   const tips = [
-    "Astuce : ne tradez pas si vous ne comprenez pas le contexte du marché.",
-    "Astuce : Apex privilégie la qualité plutôt que la quantité de trades.",
-    "Astuce : savoir ne pas agir est parfois la meilleure décision pour protéger le capital."
+    "Apex analyse 45 indicateurs en temps réel pour chaque décision.",
+    "La discipline bat la cupidité : savoir ne pas cliquer est une force.",
+    "Le 'Golden Cross' (croisement MA50/MA200) est un signal de tendance majeur.",
+    "Ne risquez jamais plus de 1% de votre capital total sur un seul trade.",
+    "Le RSI (Relative Strength Index) aide à identifier les zones de sur-achat.",
+    "Les volumes confirment la force d'un breakout : pas de volume, pas d'achat.",
+    "Le DCA (Dollar Cost Averaging) réduit l'impact de la volatilité court terme.",
+    "Gardez un journal de trading : vos erreurs sont vos meilleures leçons.",
+    "La patience est la compétence la plus rentable sur les marchés.",
+    "Apex détecte les manipulations de baleines (whales) avant qu'elles n'arrivent."
   ];
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setTipIndex((prev) => (prev + 1) % tips.length);
-    }, 5000);
-    return () => clearInterval(interval);
+    const timer = setInterval(() => setTipIndex((prev) => (prev + 1) % tips.length), 6000);
+    return () => clearInterval(timer);
   }, []);
 
-  const handleCopyLink = () => {
-    console.log("copy room link");
+  const isHost = players[0]?.id === currentPlayerId;
+  const myVote = votes[currentPlayerId] || gameSettings;
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(roomCode);
+    alert("Code copié !");
   };
-
-  const isHost = players.find(p => p.id === currentPlayerId)?.isHost;
-  const currentVote = votes[currentPlayerId] || gameSettings;
-
-  const handleVote = (partial: Partial<GameSettings>) => {
-    onUpdateVote(currentPlayerId, { ...currentVote, ...partial });
-  };
-
-  const SettingButton = ({ label, isActive, onClick }: { label: string, isActive: boolean, onClick: () => void }) => (
-    <button
-      onClick={onClick}
-      className={`px-4 py-3 rounded-xl font-medium transition-all duration-200 flex-1 text-center ${
-        isActive 
-          ? 'bg-emerald-500 text-slate-900 shadow-[0_0_15px_rgba(16,185,129,0.4)] scale-[1.02] border-transparent' 
-          : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white border border-slate-700'
-      }`}
-    >
-      {label}
-    </button>
-  );
 
   return (
-    <motion.div 
-      key="multiplayerLobby"
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.4 }}
-      className="flex flex-col items-center flex-1 w-full p-6 relative z-10 overflow-y-auto"
-    >
-      <div className="w-full max-w-7xl flex justify-between items-center mb-8 mt-4">
-        <button 
-          onClick={onBack}
-          className="flex items-center gap-3 text-slate-400 hover:text-emerald-400 transition-colors duration-200 text-xl font-medium px-4 py-2 rounded-xl hover:bg-slate-800/50 active:bg-slate-800"
-        >
-          <ArrowLeft className="w-6 h-6" />
-          Quitter la salle
-        </button>
-        
-        <button 
-          onClick={onSimulateGuest}
-          disabled={players.length >= 4}
-          className="flex items-center gap-2 text-slate-400 hover:text-white disabled:opacity-50 disabled:hover:text-slate-400 transition-colors duration-200 text-sm md:text-base font-medium px-4 py-2 rounded-xl bg-slate-800/50 hover:bg-slate-700/50 border border-slate-700"
-        >
-          <UserPlus className="w-5 h-5" />
-          Simuler un joueur
-        </button>
-      </div>
-
-      <div className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-8 items-start pb-12">
-        <div className="lg:col-span-7 space-y-8">
-          <div className="bg-slate-800/40 border border-slate-700 rounded-3xl p-8 backdrop-blur-sm shadow-2xl">
-            <div className="space-y-2 mb-6">
-              <h2 className="text-3xl font-bold text-white">Salle d'attente multijoueur</h2>
-              <p className="text-lg text-slate-400">Partagez ce code avec 2 à 4 joueurs pour rejoindre la partie.</p>
-            </div>
-
-            <div className="bg-slate-900/80 rounded-2xl p-6 border border-slate-700">
-              <p className="text-slate-400 text-sm uppercase tracking-wider font-semibold mb-3">Code de la salle</p>
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="text-5xl font-mono font-bold text-emerald-400 tracking-widest">
-                  {roomCode}
-                </div>
-                <button 
-                  onClick={handleCopyLink}
-                  className="flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-white px-6 py-4 rounded-xl transition-colors duration-200 font-medium shrink-0"
-                >
-                  <Copy className="w-5 h-5" />
-                  Copier le lien
-                </button>
-              </div>
-              <p className="text-slate-500 mt-4 text-sm break-all">
-                Lien : <span className="text-slate-400">https://demo-aethera.app/join?code={roomCode}</span>
-              </p>
-            </div>
-          </div>
-
-          <div className="bg-slate-800/40 border border-slate-700 rounded-3xl p-8 backdrop-blur-sm shadow-2xl">
-            <div className="flex items-center gap-3 mb-2">
-              <Settings2 className="w-7 h-7 text-emerald-400" />
-              <h3 className="text-2xl font-bold text-white">Paramètres de la partie (vote)</h3>
-            </div>
-            <p className="text-slate-400 mb-8">Votez pour les paramètres de la partie. La valeur la plus votée est appliquée à tous.</p>
-
-            <div className="space-y-8">
-              <div className="space-y-3">
-                <p className="text-slate-300 font-medium">Nombre de scénarios</p>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <SettingButton label="5 scénarios" isActive={gameSettings.scenariosCount === 5} onClick={() => handleVote({ scenariosCount: 5 })} />
-                  <SettingButton label="10 scénarios" isActive={gameSettings.scenariosCount === 10} onClick={() => handleVote({ scenariosCount: 10 })} />
-                  <SettingButton label="20 scénarios" isActive={gameSettings.scenariosCount === 20} onClick={() => handleVote({ scenariosCount: 20 })} />
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-slate-300 font-medium">Niveau de difficulté</p>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <SettingButton label="Débutant" isActive={gameSettings.difficulty === "beginner"} onClick={() => handleVote({ difficulty: "beginner" })} />
-                  <SettingButton label="Intermédiaire" isActive={gameSettings.difficulty === "intermediate"} onClick={() => handleVote({ difficulty: "intermediate" })} />
-                  <SettingButton label="Expert" isActive={gameSettings.difficulty === "expert"} onClick={() => handleVote({ difficulty: "expert" })} />
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-slate-300 font-medium">Type de contenu</p>
-                <div className="flex flex-col sm:flex-row gap-3">
-                  <SettingButton label="Graphiques TradingView" isActive={gameSettings.contentType === "charts"} onClick={() => handleVote({ contentType: "charts" })} />
-                  <SettingButton label="Questions simples" isActive={gameSettings.contentType === "quiz"} onClick={() => handleVote({ contentType: "quiz" })} />
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-8 bg-emerald-900/20 border border-emerald-500/30 rounded-2xl p-5 flex items-start gap-4">
-              <CheckCircle2 className="w-6 h-6 text-emerald-400 shrink-0 mt-0.5" />
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-6xl mx-auto space-y-12">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+        <div className="lg:col-span-8 space-y-8">
+          <div className="bg-white p-12 rounded-[3rem] border border-slate-200 shadow-xl relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-3 h-full bg-blue-600" />
+            <div className="flex justify-between items-start mb-12">
               <div>
-                <p className="text-emerald-400 font-semibold mb-1">Paramètres retenus</p>
-                <p className="text-slate-300">
-                  {gameSettings.scenariosCount} scénarios • {difficultyLabels[gameSettings.difficulty]} • {contentTypeLabels[gameSettings.contentType]}
-                </p>
+                <h2 className="text-4xl font-black text-blue-900 mb-2">Salon Multijoueur</h2>
+                <div className="flex items-center gap-4 text-slate-500">
+                  <span className="flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-sm font-bold animate-pulse">
+                    <Activity className="w-4 h-4" /> Live
+                  </span>
+                  Code : <span className="font-mono font-bold text-blue-600">{roomCode}</span>
+                  <button onClick={copyLink} className="p-2 hover:bg-blue-50 text-blue-600 rounded-xl transition-all">
+                    <Copy className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 bg-slate-100 px-6 py-4 rounded-2xl">
+                <Users className="w-6 h-6 text-blue-600" />
+                <span className="text-2xl font-black text-blue-900">{players.length}/4</span>
               </div>
             </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {players.map((p) => (
+                <div key={p.id} className={`p-6 rounded-2xl border-2 flex items-center justify-between transition-all ${p.id === currentPlayerId ? 'bg-blue-50 border-blue-200' : 'bg-white border-slate-100'}`}>
+                  <div className="flex items-center gap-4">
+                    <div className={`w-14 h-14 rounded-full flex items-center justify-center text-xl font-black ${p.id === currentPlayerId ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-600'}`}>{p.name[0]}</div>
+                    <div>
+                      <p className="text-xl font-bold text-blue-900">{p.name}</p>
+                      <p className="text-xs uppercase tracking-widest font-black text-slate-400">{p.isHost ? 'Hôte' : 'Trader'}</p>
+                    </div>
+                  </div>
+                  {p.id === currentPlayerId && <span className="bg-blue-600 text-white text-[10px] font-black uppercase px-2 py-1 rounded-md">Moi</span>}
+                </div>
+              ))}
+            </div>
+
+            {isHost && (
+              <div className="mt-12 p-8 bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-4 bg-white rounded-2xl shadow-sm"><UserPlus className="w-8 h-8 text-blue-600" /></div>
+                  <p className="text-lg text-slate-600 font-bold italic">Simulez des rivaux pour tester la room.</p>
+                </div>
+                <button onClick={onSimulateGuest} disabled={players.length >= 4} className="px-10 py-4 bg-white border-2 border-blue-600 text-blue-600 rounded-full font-black hover:bg-blue-600 hover:text-white transition-all disabled:opacity-30">Ajouter Invité</button>
+              </div>
+            )}
           </div>
 
-          {isHost && (
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="pt-4"
-            >
-              <button
-                onClick={() => onLockSettings(gameSettings)}
-                disabled={players.length < 2}
-                className="w-full flex items-center justify-center gap-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:border-slate-700 disabled:cursor-not-allowed text-white text-2xl font-bold py-8 rounded-3xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] border border-transparent shadow-xl shadow-emerald-900/20"
-              >
-                <Play className="w-8 h-8" />
-                Valider ces paramètres et démarrer la partie
-              </button>
-              {players.length < 2 && (
-                <p className="text-center text-slate-400 text-sm mt-4">
-                  Attendez au moins un autre joueur pour commencer.
-                </p>
-              )}
-            </motion.div>
-          )}
-
+          <div className="bg-blue-600 p-10 rounded-[3rem] text-white shadow-2xl shadow-blue-600/30 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-32 -mt-32 blur-[100px]" />
+            <div className="relative z-10 space-y-4">
+              <div className="inline-block px-4 py-2 bg-white/20 rounded-full backdrop-blur-md text-xs font-black uppercase tracking-widest">Conseil d'Apex</div>
+              <motion.p key={tipIndex} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-3xl font-medium leading-relaxed italic">"{tips[tipIndex]}"</motion.p>
+            </div>
+          </div>
         </div>
 
-        <div className="lg:col-span-5 space-y-8 flex flex-col h-full">
-          <div className="bg-slate-800/40 border border-slate-700 rounded-3xl p-8 backdrop-blur-sm shadow-2xl">
-            <h3 className="text-2xl font-semibold text-white mb-6 flex items-center gap-3">
-              <Users className="w-6 h-6 text-emerald-500" />
-              Joueurs présents ({players.length}/4)
-            </h3>
-            <div className="space-y-3">
-              {players.map((player) => (
-                <div key={player.id} className="flex items-center justify-between bg-slate-800/60 border border-slate-700/50 rounded-xl p-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
-                      <User className="w-5 h-5 text-slate-300" />
-                    </div>
-                    <span className="text-xl text-white font-medium">{player.name}</span>
-                  </div>
-                  {player.isHost && (
-                    <span className="bg-emerald-500/20 text-emerald-400 px-3 py-1 rounded-lg text-sm font-semibold border border-emerald-500/30">
-                      Hôte
-                    </span>
-                  )}
+        <div className="lg:col-span-4 h-full">
+          <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-xl h-full flex flex-col">
+            <h3 className="text-2xl font-black text-blue-900 mb-10 flex items-center gap-3"><Settings2 className="w-8 h-8 text-blue-600" /> Votes</h3>
+            <div className="space-y-10 flex-1">
+              <div className="space-y-4">
+                <p className="text-xs uppercase tracking-widest font-black text-slate-400">Difficulté</p>
+                <div className="flex flex-col gap-2">
+                  {(["beginner", "intermediate", "expert"] as const).map(d => (
+                    <SettingButton key={d} label={DIFFICULTY_LABELS[d]} isSelected={myVote.difficulty === d} onClick={() => onUpdateVote(currentPlayerId, {...myVote, difficulty: d})} />
+                  ))}
                 </div>
-              ))}
-              {Array.from({ length: Math.max(0, 4 - players.length) }).map((_, i) => (
-                <div key={`empty-${i}`} className="flex items-center gap-4 bg-slate-800/20 border border-slate-700/30 border-dashed rounded-xl p-4 opacity-50">
-                  <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center">
-                    <User className="w-5 h-5 text-slate-600" />
-                  </div>
-                  <span className="text-lg text-slate-500 italic">En attente d'un joueur...</span>
+              </div>
+              <div className="space-y-4">
+                <p className="text-xs uppercase tracking-widest font-black text-slate-400">Contenu</p>
+                <div className="flex flex-col gap-2">
+                  {(["charts", "quiz"] as const).map(t => (
+                    <SettingButton key={t} label={CONTENT_TYPE_LABELS[t]} isSelected={myVote.contentType === t} onClick={() => onUpdateVote(currentPlayerId, {...myVote, contentType: t})} />
+                  ))}
                 </div>
-              ))}
+              </div>
             </div>
+            <div className="mt-12 pt-8 border-t border-slate-100">
+              {isHost ? (
+                <button onClick={() => onLockSettings(myVote)} className="w-full py-6 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl text-2xl font-black shadow-xl transition-all active:scale-95">Démarrer</button>
+              ) : (
+                <p className="text-center text-slate-400 font-bold italic">L'hôte prépare le lancement...</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function GameScreen({ playerName, scenario, index, total, onDecision }: { playerName: string, scenario: Scenario, index: number, total: number, onDecision: (d: Decision) => void }) {
+  const [selected, setSelected] = useState<Decision | null>(null);
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-7xl mx-auto flex flex-col gap-8 h-full">
+      <div className="flex justify-between items-center bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm">
+        <div className="flex items-center gap-6">
+          <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-black">{playerName[0]}</div>
+          <div>
+            <p className="text-xl font-black text-blue-900">{playerName}</p>
+            <p className="text-sm text-slate-400 uppercase tracking-widest font-bold">Trader en mission</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-8">
+          <div className="text-right">
+            <p className="text-xs font-black text-slate-400 uppercase tracking-tighter">Progression</p>
+            <p className="text-2xl font-black text-blue-600">{index + 1} / {total}</p>
+          </div>
+          <div className="w-24 h-3 bg-slate-100 rounded-full overflow-hidden">
+            <motion.div initial={{ width: 0 }} animate={{ width: `${((index + 1) / total) * 100}%` }} className="h-full bg-blue-600" />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 flex-1 min-h-[500px]">
+        <div className="lg:col-span-8 bg-white border border-slate-200 rounded-[3rem] overflow-hidden shadow-2xl relative flex flex-col min-h-[500px]">
+          {scenario.contentType === 'charts' ? (
+            <div className="flex-1 w-full relative bg-slate-50">
+              <TradingViewChart symbol={scenario.chartSymbol || "BINANCE:BTCUSDT"} theme="light" />
+              <div className="absolute top-6 left-6 bg-white/90 backdrop-blur-md px-6 py-4 rounded-2xl border border-slate-200 shadow-xl max-w-sm z-10">
+                <h4 className="text-xl font-bold text-blue-900 mb-1">{scenario.title}</h4>
+                <p className="text-sm text-slate-500 italic">"{scenario.description}"</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1 flex flex-col items-center justify-center p-12 text-center space-y-8 bg-slate-50">
+              <div className="p-8 bg-white rounded-full shadow-2xl animate-pulse"><HelpCircle className="w-24 h-24 text-blue-600" /></div>
+              <div className="space-y-6 max-w-2xl">
+                <h3 className="text-4xl font-black text-blue-900 leading-tight">{scenario.description}</h3>
+                <div className="grid grid-cols-1 gap-4 text-left">
+                  {scenario.options?.map((opt, i) => (
+                    <button key={i} onClick={() => setSelected(i === 0 ? "buy" : i === 1 ? "hold" : "sell")} className={`p-6 rounded-2xl border-2 text-xl font-bold transition-all ${selected === (i === 0 ? "buy" : i === 1 ? "hold" : "sell") ? 'bg-blue-600 text-white border-blue-600 shadow-xl' : 'bg-white border-slate-200 text-slate-600 hover:border-blue-400'}`}>{opt}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="lg:col-span-4 flex flex-col gap-6">
+          <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-xl flex-1 flex flex-col">
+            <h3 className="text-2xl font-black text-blue-900 mb-12 flex items-center gap-3"><Zap className="w-8 h-8 text-blue-600" /> Votre Décision</h3>
+            <div className="flex-1 flex flex-col gap-4">
+              <button onClick={() => setSelected('buy')} className={`group relative p-8 rounded-3xl border-2 transition-all flex items-center gap-6 overflow-hidden ${selected === 'buy' ? 'bg-emerald-600 border-emerald-600 text-white shadow-2xl scale-105' : 'bg-white border-slate-100 hover:border-emerald-400 text-slate-800'}`}>
+                <div className={`p-4 rounded-2xl ${selected === 'buy' ? 'bg-white/20' : 'bg-emerald-50 text-emerald-600'} transition-colors`}><TrendingUp className="w-10 h-10" /></div>
+                <div className="text-left"><p className="text-2xl font-black uppercase">Acheter</p><p className={selected === 'buy' ? 'text-emerald-50 text-sm' : 'text-slate-400 text-sm'}>Prendre position Long</p></div>
+              </button>
+              <button onClick={() => setSelected('hold')} className={`group relative p-8 rounded-3xl border-2 transition-all flex items-center gap-6 overflow-hidden ${selected === 'hold' ? 'bg-blue-600 border-blue-600 text-white shadow-2xl scale-105' : 'bg-white border-slate-100 hover:border-blue-400 text-slate-800'}`}>
+                <div className={`p-4 rounded-2xl ${selected === 'hold' ? 'bg-white/20' : 'bg-blue-50 text-blue-600'} transition-colors`}><Minus className="w-10 h-10" /></div>
+                <div className="text-left"><p className="text-2xl font-black uppercase">Attendre</p><p className={selected === 'hold' ? 'text-blue-50 text-sm' : 'text-slate-400 text-sm'}>Neutralité active</p></div>
+              </button>
+              <button onClick={() => setSelected('sell')} className={`group relative p-8 rounded-3xl border-2 transition-all flex items-center gap-6 overflow-hidden ${selected === 'sell' ? 'bg-rose-600 border-rose-600 text-white shadow-2xl scale-105' : 'bg-white border-slate-100 hover:border-rose-400 text-slate-800'}`}>
+                <div className={`p-4 rounded-2xl ${selected === 'sell' ? 'bg-white/20' : 'bg-rose-50 text-rose-600'} transition-colors`}><TrendingDown className="w-10 h-10" /></div>
+                <div className="text-left"><p className="text-2xl font-black uppercase">Vendre</p><p className={selected === 'sell' ? 'text-rose-50 text-sm' : 'text-slate-400 text-sm'}>Prendre position Short</p></div>
+              </button>
+            </div>
+            <div className="mt-12">
+              <button onClick={() => selected && onDecision(selected)} disabled={!selected} className="w-full py-6 bg-blue-900 border-4 border-blue-900 text-white rounded-[2rem] text-2xl font-black transition-all hover:bg-blue-700 disabled:opacity-20 disabled:grayscale">Valider la position</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+function ApexExplanationScreen({ userDecision, scenario, onComplete }: { userDecision: Decision, scenario: Scenario, onComplete: () => void }) {
+  const [timeLeft, setTimeLeft] = useState(10);
+  useEffect(() => {
+    if (timeLeft <= 0) { onComplete(); return; }
+    const timer = setTimeout(() => setTimeLeft(prev => prev - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [timeLeft]);
+
+  const isAligned = userDecision === scenario.apexGroundTruth.decision;
+
+  return (
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-5xl mx-auto space-y-12 py-12">
+      <div className="flex flex-col items-center text-center space-y-6">
+        <div className={`w-32 h-32 rounded-full flex items-center justify-center border-8 transition-colors ${isAligned ? 'bg-emerald-600 border-emerald-100' : 'bg-blue-600 border-blue-100'} shadow-2xl shadow-blue-500/10`}>
+          {isAligned ? <Check className="w-16 h-16 text-white" /> : <Activity className="w-16 h-16 text-white" />}
+        </div>
+        <h2 className="text-5xl font-black text-blue-900 leading-none">{isAligned ? "Aligné avec Apex" : "Divergence Tactique"}</h2>
+        <p className="text-2xl text-slate-500 font-medium italic">"{scenario.title}"</p>
+      </div>
+
+      <div className="bg-white p-12 rounded-[3.5rem] border border-slate-200 shadow-2xl overflow-hidden relative">
+        <div className="absolute top-0 right-0 p-8">
+           <div className="flex items-center gap-3 bg-slate-100 px-6 py-4 rounded-2xl border border-slate-200">
+             <span className="text-2xl font-black text-blue-600">{timeLeft}s</span>
+             <p className="text-xs uppercase font-black text-slate-400 w-20 leading-tight">Analyse tactique</p>
+           </div>
+        </div>
+
+        <div className="space-y-12 relative z-10">
+          <div className="flex flex-wrap gap-4">
+            {scenario.apexGroundTruth.activatedNetworks.map(net => (
+              <span key={net} className="px-5 py-2 bg-blue-50 text-blue-600 border border-blue-100 rounded-full text-xs font-black uppercase tracking-widest flex items-center gap-2">
+                <Zap className="w-4 h-4" /> Réseau {net}
+              </span>
+            ))}
           </div>
 
-          <div className="bg-slate-800/40 border border-slate-700 rounded-3xl p-8 backdrop-blur-sm shadow-2xl flex-1 flex flex-col justify-center relative overflow-hidden min-h-[250px]">
-            <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl pointer-events-none" />
-            
-            <div className="flex items-center gap-3 mb-6 relative z-10">
-              <Info className="w-6 h-6 text-blue-400" />
-              <h3 className="text-xl font-semibold text-white">Conseil d'expert</h3>
+          <div className="space-y-8">
+            <div className="space-y-4">
+              <p className="text-xs uppercase tracking-[0.3em] font-black text-slate-400">La Rationale d'Apex</p>
+              <p className="text-3xl font-bold text-blue-900 leading-relaxed max-w-3xl">{scenario.apexGroundTruth.rationale}</p>
             </div>
-            
-            <div className="relative flex-1 z-10">
-              <AnimatePresence mode="wait">
-                <motion.p
-                  key={tipIndex}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  transition={{ duration: 0.5 }}
-                  className="text-2xl text-slate-300 leading-relaxed font-light absolute inset-0"
-                >
-                  {tips[tipIndex]}
-                </motion.p>
-              </AnimatePresence>
-            </div>
-            
-            <div className="flex gap-2 mt-8 relative z-10">
-              {tips.map((_, i) => (
-                <div 
-                  key={i} 
-                  className={`h-1.5 rounded-full transition-all duration-500 ${i === tipIndex ? 'w-8 bg-blue-500' : 'w-2 bg-slate-700'}`}
-                />
-              ))}
+            <div className="p-8 bg-blue-50 rounded-3xl border-2 border-dashed border-blue-200">
+              <p className="text-lg font-black text-blue-600 uppercase tracking-widest mb-3 flex items-center gap-2"><Shield className="w-6 h-6" /> Note de Vigilance</p>
+              <p className="text-2xl font-medium text-blue-900 leading-relaxed italic">{scenario.apexGroundTruth.riskComment}</p>
             </div>
           </div>
+        </div>
+        <div className="absolute bottom-0 left-0 h-3 bg-blue-600" style={{ width: `${(timeLeft / 10) * 100}%`, transition: 'width 1s linear' }} />
+      </div>
+    </motion.div>
+  );
+}
+
+function ResultsScreen({ playerName, score, total, alignCount, disciplineCount, onRestart }: { playerName: string, score: number, total: number, alignCount: number, disciplineCount: number, onRestart: () => void }) {
+  const [email, setEmail] = useState("");
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const alignPercent = Math.round((alignCount / total) * 100);
+
+  return (
+    <motion.div initial={{ opacity: 0, scale: 1.1 }} animate={{ opacity: 1, scale: 1 }} className="w-full max-w-6xl mx-auto space-y-12 py-12">
+      <div className="flex flex-col items-center text-center space-y-6">
+        <h2 className="text-7xl font-black text-blue-900 leading-none">Rapport de <span className="text-blue-600">Mission</span></h2>
+        <p className="text-2xl text-slate-500 font-medium">Analyse des performances pour {playerName}.</p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-2xl text-center space-y-4 hover:scale-105 transition-transform">
+          <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Score Final</p>
+          <p className="text-7xl font-black text-blue-900">{score}</p>
+          <div className="inline-block px-4 py-2 bg-blue-50 text-blue-600 rounded-full text-xs font-black uppercase tracking-widest">Points Tactiques</div>
+        </div>
+        <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-2xl text-center space-y-4 hover:scale-105 transition-transform">
+          <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Alignement Apex</p>
+          <p className="text-7xl font-black text-emerald-600">{alignPercent}%</p>
+          <div className="inline-block px-4 py-2 bg-emerald-50 text-emerald-600 rounded-full text-xs font-black uppercase tracking-widest">Stratégie GAGNANTE</div>
+        </div>
+        <div className="bg-white p-10 rounded-[3rem] border border-slate-200 shadow-2xl text-center space-y-4 hover:scale-105 transition-transform">
+          <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Bonus Discipline</p>
+          <p className="text-7xl font-black text-blue-600">{disciplineCount}</p>
+          <div className="inline-block px-4 py-2 bg-blue-50 text-blue-600 rounded-full text-xs font-black uppercase tracking-widest">Non-actions Utiles</div>
+        </div>
+      </div>
+
+      <div className="bg-blue-900 text-white p-12 md:p-20 rounded-[4rem] shadow-3xl shadow-blue-500/20 relative overflow-hidden flex flex-col md:flex-row items-center gap-16">
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-600/30 rounded-full -mr-64 -mt-64 blur-[150px]" />
+        <div className="relative z-10 space-y-8 flex-1">
+          <h3 className="text-5xl md:text-6xl font-black leading-tight">Accédez à la puissance d'Apex.</h3>
+          <p className="text-xl text-blue-100/80 leading-relaxed max-w-xl">Inscrivez-vous pour rejoindre la version Beta et trader avec l'intelligence de pointe d'Aethera Apex.</p>
+          <div className="flex flex-col sm:flex-row gap-4">
+            {!isSubmitted ? (
+               <>
+                 <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email professionnel" className="flex-1 bg-white/10 border-2 border-white/20 focus:border-white focus:bg-white/20 rounded-2xl px-8 py-5 text-xl outline-none transition-all placeholder:text-white/30" />
+                 <button onClick={() => setIsSubmitted(true)} className="px-10 py-5 bg-white text-blue-900 text-xl font-black rounded-2xl hover:bg-blue-50 transition-all flex items-center justify-center gap-3">Accès Prioritaire <ArrowRight className="w-8 h-8" /></button>
+               </>
+            ) : (
+               <div className="bg-emerald-500/20 border-2 border-emerald-500/50 p-6 rounded-3xl flex items-center gap-6">
+                 <div className="p-3 bg-emerald-500 rounded-full shadow-lg"><Check className="w-8 h-8 text-white" /></div>
+                 <p className="text-2xl font-bold">Inscription validée ! À bientôt sur Apex.</p>
+               </div>
+            )}
+          </div>
+        </div>
+        <div className="relative z-10 w-full md:w-fit">
+           <button onClick={onRestart} className="group flex items-center gap-4 text-blue-300 hover:text-white text-xl font-black uppercase tracking-widest transition-all">Refaire une mission <RefreshCw className="w-8 h-8 group-hover:rotate-180 transition-transform duration-700" /></button>
         </div>
       </div>
     </motion.div>
@@ -544,11 +560,16 @@ function MultiplayerLobbyScreen({
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState<Screen>("home");
   const [selectedMode, setSelectedMode] = useState<Mode>(null);
-  
   const [playerName, setPlayerName] = useState<string>("");
   const [roomCode, setRoomCode] = useState<string>("");
+  const [currentScenarioIndex, setCurrentScenarioIndex] = useState<number>(0);
+  const [scenarios, setScenarios] = useState<Scenario[]>([]);
+  const [userDecisions, setUserDecisions] = useState<{ [index: number]: Decision }>({});
+  const [score, setScore] = useState<number>(0);
+  const [streak, setStreak] = useState<number>(0);
+  const [alignCount, setAlignCount] = useState<number>(0);
+  const [disciplineCount, setDisciplineCount] = useState<number>(0);
   const [players, setPlayers] = useState<Player[]>([]);
-
   const [gameSettings, setGameSettings] = useState<GameSettings>({
     scenariosCount: 5,
     difficulty: "beginner",
@@ -566,355 +587,151 @@ export default function App() {
     setCurrentScreen("enterName");
   };
 
-  const handleAboutApex = () => {
-    alert("À propos d'Apex : Ce module sera disponible prochainement.");
-  };
-
-  const handleBackToHome = () => {
-    setCurrentScreen("home");
-    setSelectedMode(null);
-    setPlayerName("");
-    setRoomCode("");
-    setPlayers([]);
-    setVotes({});
-    setGameSettings({
-      scenariosCount: 5,
-      difficulty: "beginner",
-      contentType: "charts"
-    });
-  };
-
-  const handleBackToEnterName = () => {
-    setCurrentScreen("enterName");
-    setGameSettings({
-      scenariosCount: 5,
-      difficulty: "beginner",
-      contentType: "charts"
-    });
-  };
-
-  const generateRoomCode = () => {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
-  };
-
-  const calculateMajority = (votesObj: PlayerVotes, currentSettings: GameSettings): GameSettings => {
-    if (Object.keys(votesObj).length === 0) return currentSettings;
-
-    const counts = {
-      scenariosCount: { 5: 0, 10: 0, 20: 0 },
-      difficulty: { beginner: 0, intermediate: 0, expert: 0 },
-      contentType: { charts: 0, quiz: 0 }
-    };
-
-    Object.values(votesObj).forEach(vote => {
-      counts.scenariosCount[vote.scenariosCount]++;
-      counts.difficulty[vote.difficulty]++;
-      counts.contentType[vote.contentType]++;
-    });
-
-    const getMajority = <T extends string | number>(countObj: Record<string, number>, currentVal: T): T => {
-      let maxCount = -1;
-      let majorityVal = currentVal;
-      let tie = false;
-
-      for (const [valStr, count] of Object.entries(countObj)) {
-        const val = (typeof currentVal === 'number' ? Number(valStr) : valStr) as T;
-        if (count > maxCount) {
-          maxCount = count;
-          majorityVal = val;
-          tie = false;
-        } else if (count === maxCount) {
-          tie = true;
-        }
-      }
-      return tie ? currentVal : majorityVal;
-    };
-
-    return {
-      scenariosCount: getMajority(counts.scenariosCount, currentSettings.scenariosCount),
-      difficulty: getMajority(counts.difficulty, currentSettings.difficulty),
-      contentType: getMajority(counts.contentType, currentSettings.contentType),
-    };
-  };
-
-  const handleUpdateVote = (playerId: string, newVote: GameSettings) => {
-    setVotes(prev => {
-      const newVotes = { ...prev, [playerId]: newVote };
-      const newSettings = calculateMajority(newVotes, gameSettings);
-      setGameSettings(newSettings);
-      return newVotes;
-    });
-  };
-
   const handleNameSubmit = (name: string) => {
     setPlayerName(name);
-    
-    if (selectedMode === "multiplayer") {
-      const code = generateRoomCode();
-      setRoomCode(code);
-      const hostId = "host";
-      setPlayers([{ id: hostId, name, isHost: true }]);
-      
-      // Initialize host vote with default settings
-      handleUpdateVote(hostId, gameSettings);
-      
-      setCurrentScreen("multiplayerLobby");
-    } else if (selectedMode === "solo") {
-      setGameSettings({
-        scenariosCount: 5,
-        difficulty: "beginner",
-        contentType: "charts"
-      });
+    if (selectedMode === "solo") {
       setCurrentScreen("soloSettings");
+    } else {
+      setRoomCode(Math.random().toString(36).substring(2, 8).toUpperCase());
+      setPlayers([{ id: "p1", name: name, isHost: true }]);
+      setCurrentScreen("multiplayerLobby");
     }
   };
 
-  const handleSimulateGuest = () => {
-    if (players.length >= 4) return;
-    const guestNumber = players.length;
-    const guestId = `guest-${guestNumber}`;
-    
-    setPlayers(prev => [
-      ...prev,
-      { id: guestId, name: `Guest ${guestNumber}`, isHost: false }
-    ]);
-
-    // Give the guest a random vote to simulate real voting
-    const randomScenarios = [5, 10, 20][Math.floor(Math.random() * 3)] as 5 | 10 | 20;
-    const randomDiff = ["beginner", "intermediate", "expert"][Math.floor(Math.random() * 3)] as Difficulty;
-    const randomContent = ["charts", "quiz"][Math.floor(Math.random() * 2)] as ContentType;
-    
-    handleUpdateVote(guestId, {
-      scenariosCount: randomScenarios,
-      difficulty: randomDiff,
-      contentType: randomContent
-    });
+  const handleUpdateVote = (pid: string, vote: GameSettings) => {
+    setVotes(prev => ({ ...prev, [pid]: vote }));
   };
 
-  const handleLockSettings = (finalSettings: GameSettings) => {
-    console.log("Final game settings", finalSettings);
-    console.log("start multiplayer game");
+  const handleSimulateGuest = () => {
+    const names = ["Jordan", "Morgan", "Sam", "Alex"];
+    const id = "p" + (players.length + 1);
+    setPlayers(prev => [...prev, { id: id, name: names[players.length], isHost: false }]);
   };
 
   const handleStartSolo = () => {
-    console.log("start solo game", gameSettings, playerName);
+    const filtered = mockScenarios.filter(s => s.difficulty === gameSettings.difficulty && s.contentType === gameSettings.contentType);
+    const shuffled = [...filtered].sort(() => 0.5 - Math.random());
+    setScenarios(shuffled.slice(0, gameSettings.scenariosCount));
+    setCurrentScenarioIndex(0);
+    setCurrentScreen("game");
+  };
+
+  const handleLockSettings = (settings: GameSettings) => {
+    setGameSettings(settings);
+    const filtered = mockScenarios.filter(s => s.difficulty === settings.difficulty && s.contentType === settings.contentType);
+    const shuffled = [...filtered].sort(() => 0.5 - Math.random());
+    setScenarios(shuffled.slice(0, settings.scenariosCount));
+    setCurrentScenarioIndex(0);
+    setCurrentScreen("game");
+  };
+
+  const handleGameDecision = (decision: Decision) => {
+    setUserDecisions(prev => ({ ...prev, [currentScenarioIndex]: decision }));
+    const scenario = scenarios[currentScenarioIndex];
+    const isAligned = decision === scenario.apexGroundTruth.decision;
+    
+    let points = 0;
+    if (isAligned) {
+      points = 100 + (streak * 20);
+      setStreak(prev => prev + 1);
+      setAlignCount(prev => prev + 1);
+    } else {
+      setStreak(0);
+      points = -50;
+    }
+
+    if (decision === 'hold' && scenario.apexGroundTruth.decision === 'hold') {
+      setDisciplineCount(prev => prev + 1);
+      points += 50;
+    }
+
+    setScore(prev => prev + points);
+    setCurrentScreen("apexExplanation");
+  };
+
+  const handleExplanationComplete = () => {
+    if (currentScenarioIndex < scenarios.length - 1) {
+      setCurrentScenarioIndex(prev => prev + 1);
+      setCurrentScreen("game");
+    } else {
+      setCurrentScreen("results");
+    }
+  };
+
+  const handleRestart = () => {
+    setCurrentScreen("home");
+    setSelectedMode(null);
+    setPlayerName("");
+    setPlayers([]);
+    setUserDecisions({});
+    setScore(0);
+    setStreak(0);
+    setAlignCount(0);
+    setDisciplineCount(0);
   };
 
   return (
-    <div className="relative min-h-screen bg-slate-900 text-slate-50 font-sans selection:bg-emerald-500/30 flex flex-col overflow-hidden">
-      
-      {/* Animated Background */}
-      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <motion.div
-          animate={{
-            x: ['0%', '5%', '0%'],
-            y: ['0%', '-5%', '0%'],
-          }}
-          transition={{
-            duration: 20,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-          className="absolute top-[-10%] left-[-10%] w-[50vw] h-[50vw] rounded-full bg-emerald-900/20 blur-[100px] will-change-transform"
-        />
-        <motion.div
-          animate={{
-            x: ['0%', '-5%', '0%'],
-            y: ['0%', '5%', '0%'],
-          }}
-          transition={{
-            duration: 25,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }}
-          className="absolute bottom-[-10%] right-[-10%] w-[60vw] h-[60vw] rounded-full bg-blue-900/20 blur-[100px] will-change-transform"
-        />
-      </div>
-
-      <AnimatePresence mode="wait">
-        {currentScreen === "home" && (
-          <motion.div 
-            key="home"
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.4 }}
-            className="flex flex-col flex-1 w-full z-10"
-          >
-            <header className="relative z-10 w-full p-8 md:p-12 flex flex-col items-center text-center space-y-4">
-              <motion.div 
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6 }}
-                className="inline-flex items-center gap-4"
-              >
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                  <Activity className="w-7 h-7 text-slate-900" />
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-blue-100 selection:text-blue-900">
+      <div className="w-full max-w-7xl mx-auto flex flex-col min-h-screen p-4 py-12 md:py-20 justify-center">
+        <AnimatePresence mode="wait">
+          {currentScreen === "home" && (
+            <motion.div key="home" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="flex flex-col items-center gap-16 md:gap-24">
+              <div className="text-center space-y-8">
+                <div className="inline-flex p-6 rounded-[2.5rem] bg-blue-600 text-white shadow-3xl shadow-blue-500/20 mb-8 transform hover:rotate-3 transition-transform">
+                  <Activity className="w-16 h-16 md:w-24 md:h-24" />
                 </div>
-                <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-white">
-                  Aethera <span className="text-slate-400 font-light">| Apex Trading Demo</span>
+                <h1 className="text-7xl md:text-9xl font-black tracking-tighter text-blue-900 flex flex-col md:flex-row items-center justify-center md:gap-8">
+                  APEX <span className="text-blue-600">TRADING</span>
                 </h1>
-              </motion.div>
-              <motion.p 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-                className="text-xl md:text-2xl text-slate-300 max-w-3xl font-light"
-              >
-                Découvrez comment Apex décide quand agir… et quand ne pas agir.
-              </motion.p>
-            </header>
+                <p className="text-2xl md:text-3xl text-slate-500 font-medium max-w-3xl mx-auto leading-relaxed">
+                  L'Intelligence Artificielle de pointe pour une précision de marché absolue.
+                </p>
+              </div>
 
-            <main className="relative z-10 flex-1 w-full max-w-7xl mx-auto p-6 md:p-12 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
-              <motion.div 
-                initial={{ opacity: 0, x: -30 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: 0.3 }}
-                className="lg:col-span-7 flex flex-col space-y-10"
-              >
-                <div className="space-y-3">
-                  <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-white">
-                    Choisissez votre mode de jeu
-                  </h2>
-                  <p className="text-slate-400 text-xl">
-                    Testez vos instincts face au marché et comparez vos choix à ceux de l'IA.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 gap-6">
-                  <button 
-                    onClick={handleSelectSolo}
-                    className="group relative flex items-center p-6 md:p-8 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/50 rounded-2xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] active:bg-slate-900 text-left overflow-hidden min-h-[140px]"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/0 to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <div className="w-20 h-20 rounded-full bg-slate-700/50 group-hover:bg-emerald-500/20 flex items-center justify-center mr-6 shrink-0 transition-colors duration-300">
-                      <User className="w-10 h-10 text-slate-300 group-hover:text-emerald-400 transition-colors duration-300" />
-                    </div>
-                    <div>
-                      <h3 className="text-3xl font-semibold text-white mb-2 group-hover:text-emerald-400 transition-colors duration-300">
-                        Mode Solo
-                      </h3>
-                      <p className="text-slate-400 text-xl">
-                        Jouez seul, 5 à 20 scénarios guidés.
-                      </p>
-                    </div>
-                  </button>
-
-                  <button 
-                    onClick={handleSelectMultiplayer}
-                    className="group relative flex items-center p-6 md:p-8 bg-slate-800/50 hover:bg-slate-800 border border-slate-700 hover:border-emerald-500/50 rounded-2xl transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] active:bg-slate-900 text-left overflow-hidden min-h-[140px]"
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/0 to-emerald-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    <div className="w-20 h-20 rounded-full bg-slate-700/50 group-hover:bg-emerald-500/20 flex items-center justify-center mr-6 shrink-0 transition-colors duration-300">
-                      <Users className="w-10 h-10 text-slate-300 group-hover:text-emerald-400 transition-colors duration-300" />
-                    </div>
-                    <div>
-                      <h3 className="text-3xl font-semibold text-white mb-2 group-hover:text-emerald-400 transition-colors duration-300">
-                        Mode Multijoueur <span className="text-slate-500 text-2xl font-normal">(2–4 joueurs)</span>
-                      </h3>
-                      <p className="text-slate-400 text-xl">
-                        Affrontez vos collègues et comparez-vous à Apex.
-                      </p>
-                    </div>
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-4 text-slate-300 bg-slate-800/30 p-5 rounded-xl border border-slate-700/50 w-fit">
-                  <ShieldCheck className="w-6 h-6 text-emerald-500 shrink-0" />
-                  <p className="text-lg">Aucun compte requis. Niveau débutant bienvenu.</p>
-                </div>
-              </motion.div>
-
-              <motion.div 
-                initial={{ opacity: 0, x: 30 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.6, delay: 0.4 }}
-                className="lg:col-span-5 flex flex-col h-full justify-center"
-              >
-                <div className="bg-slate-800/40 border border-slate-700 rounded-3xl p-8 md:p-10 relative overflow-hidden">
-                  <div className="absolute -top-24 -right-24 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
-                  
-                  <div className="relative z-10">
-                    <div className="flex items-center gap-4 mb-8">
-                      <div className="p-3 bg-slate-700/50 rounded-xl">
-                        <Target className="w-8 h-8 text-emerald-400" />
-                      </div>
-                      <h3 className="text-3xl font-bold text-white">Apex en 3 points</h3>
-                    </div>
-                    
-                    <ul className="space-y-8">
-                      <li className="flex items-start gap-5">
-                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mt-2.5 shrink-0 shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
-                        <p className="text-slate-300 text-xl leading-relaxed">
-                          <strong className="text-white font-medium">Orchestre plusieurs réseaux spécialisés</strong> (tendance, momentum, structure).
-                        </p>
-                      </li>
-                      <li className="flex items-start gap-5">
-                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mt-2.5 shrink-0 shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
-                        <p className="text-slate-300 text-xl leading-relaxed">
-                          <strong className="text-white font-medium">Privilégie la qualité des trades</strong> plutôt que la fréquence.
-                        </p>
-                      </li>
-                      <li className="flex items-start gap-5">
-                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 mt-2.5 shrink-0 shadow-[0_0_10px_rgba(16,185,129,0.8)]" />
-                        <p className="text-slate-300 text-xl leading-relaxed">
-                          <strong className="text-white font-medium">Sait quand ne PAS agir</strong> pour protéger le capital.
-                        </p>
-                      </li>
-                    </ul>
-
-                    <div className="mt-12 pt-8 border-t border-slate-700/50">
-                      <button 
-                        onClick={handleAboutApex}
-                        className="flex items-center gap-3 text-slate-400 hover:text-emerald-400 hover:bg-slate-800/50 active:bg-slate-800 px-4 py-2 rounded-lg transition-all duration-200 text-xl font-medium -ml-4"
-                      >
-                        <Info className="w-6 h-6" />
-                        À propos d'Apex
-                      </button>
-                    </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-5xl">
+                <button 
+                  onClick={handleSelectSolo}
+                  className="group p-10 md:p-14 bg-white border border-slate-200 rounded-[4rem] text-left hover:border-blue-500 hover:shadow-3xl transition-all duration-500 relative overflow-hidden"
+                >
+                  <div className="relative z-10 flex flex-col h-full">
+                    <div className="p-4 bg-blue-50 w-fit rounded-2xl mb-8 group-hover:scale-110 transition-transform"><User className="w-12 h-12 text-blue-600" /></div>
+                    <h2 className="text-4xl font-black text-blue-900 mb-4">Mode Solo</h2>
+                    <p className="text-xl text-slate-500 leading-relaxed">Affrontez l'IA en face-à-face sur des scénarios réels en temps fractionné.</p>
                   </div>
+                  <ChevronRight className="absolute bottom-10 right-10 w-12 h-12 text-blue-100 group-hover:text-blue-300 transition-colors" />
+                </button>
+
+                <button 
+                   onClick={handleSelectMultiplayer}
+                   className="group p-10 md:p-14 bg-blue-600 rounded-[4rem] text-left hover:bg-blue-700 hover:shadow-3xl transition-all duration-500 relative overflow-hidden"
+                >
+                  <div className="relative z-10 flex flex-col h-full">
+                    <div className="p-4 bg-white/20 w-fit rounded-2xl mb-8 group-hover:scale-110 transition-transform"><Users className="w-12 h-12 text-white" /></div>
+                    <h2 className="text-4xl font-black text-white mb-4">Multijoueur</h2>
+                    <p className="text-xl text-blue-100 leading-relaxed">Défiez d'autres traders et comparez votre discipline à celle d'Apex.</p>
+                  </div>
+                  <ChevronRight className="absolute bottom-10 right-10 w-12 h-12 text-blue-100/20 group-hover:text-white/40 transition-colors" />
+                </button>
+              </div>
+
+              <div className="flex flex-col items-center gap-6">
+                <div className="flex items-center gap-4 bg-white px-8 py-5 rounded-full border border-slate-200 shadow-sm animate-bounce-slow">
+                   <ShieldCheck className="w-6 h-6 text-emerald-500" />
+                   <p className="font-bold text-slate-600 tracking-wide">Optimisé pour Bornes 4K</p>
                 </div>
-              </motion.div>
-            </main>
-          </motion.div>
-        )}
+                <button onClick={() => alert("Apex v1.0 - IA de Trading Institutionnelle")} className="flex items-center gap-3 text-slate-400 hover:text-blue-600 font-black uppercase tracking-widest text-sm transition-all"><Info className="w-6 h-6" /> À propos du moteur Apex</button>
+              </div>
+            </motion.div>
+          )}
 
-        {currentScreen === "enterName" && (
-          <EnterNameScreen 
-            key="enterName"
-            mode={selectedMode} 
-            onBack={handleBackToHome} 
-            onSubmit={handleNameSubmit} 
-          />
-        )}
-
-        {currentScreen === "soloSettings" && (
-          <SoloSettingsScreen
-            key="soloSettings"
-            playerName={playerName}
-            gameSettings={gameSettings}
-            onUpdateSettings={setGameSettings}
-            onStartSolo={handleStartSolo}
-            onBack={handleBackToEnterName}
-          />
-        )}
-
-        {currentScreen === "multiplayerLobby" && (
-          <MultiplayerLobbyScreen
-            key="multiplayerLobby"
-            roomCode={roomCode}
-            players={players}
-            playerName={playerName}
-            currentPlayerId="host"
-            gameSettings={gameSettings}
-            votes={votes}
-            onUpdateVote={handleUpdateVote}
-            onLockSettings={handleLockSettings}
-            onBack={handleBackToHome}
-            onSimulateGuest={handleSimulateGuest}
-          />
-        )}
-      </AnimatePresence>
+          {currentScreen === "enterName" && <EnterNameScreen mode={selectedMode} onBack={() => setCurrentScreen("home")} onSubmit={handleNameSubmit} />}
+          {currentScreen === "soloSettings" && <SoloSettingsScreen playerName={playerName} gameSettings={gameSettings} onUpdateSettings={setGameSettings} onStartSolo={handleStartSolo} onBack={() => setCurrentScreen("enterName")} />}
+          {currentScreen === "multiplayerLobby" && <MultiplayerLobbyScreen roomCode={roomCode} players={players} playerName={playerName} currentPlayerId="p1" gameSettings={gameSettings} votes={votes} onUpdateVote={handleUpdateVote} onLockSettings={handleLockSettings} onBack={() => setCurrentScreen("home")} onSimulateGuest={handleSimulateGuest} />}
+          {currentScreen === "game" && <GameScreen playerName={playerName} scenario={scenarios[currentScenarioIndex]} index={currentScenarioIndex} total={scenarios.length} onDecision={handleGameDecision} />}
+          {currentScreen === "apexExplanation" && <ApexExplanationScreen userDecision={userDecisions[currentScenarioIndex]} scenario={scenarios[currentScenarioIndex]} onComplete={handleExplanationComplete} />}
+          {currentScreen === "results" && <ResultsScreen playerName={playerName} score={score} total={scenarios.length} alignCount={alignCount} disciplineCount={disciplineCount} onRestart={handleRestart} />}
+        </AnimatePresence>
+      </div>
     </div>
   );
 }

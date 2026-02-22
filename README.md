@@ -1,20 +1,43 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Aethera Apex - Trading Demo MVP
 
-# Run and deploy your AI Studio app
+Aethera Apex is a high-fidelity trading simulation and education platform designed for kiosks and events. It leverages real-world trading scenarios to teach discipline, risk management, and alignment with institutional-grade AI analysis.
 
-This contains everything you need to run your app locally.
+## 🚀 Features
 
-View your app in AI Studio: https://ai.studio/apps/b353b59d-4239-4c44-887b-07d2d74d19c0
+- **Core Game Loop**: Interactive trading scenarios (Charts & Quiz).
+- **Apex AI**: Advanced rationale engine that explains market decisions.
+- **Scoring System**: Points for alignment with Apex, discipline bonuses, and streak multipliers.
+- **TradingView Integration**: Low-latency, real-time-like chart embeds for 15+ symbols.
+- **Multilayer Lobby**: Simulated and real-time multiplayer coordination (Phase 2).
+- **Lead Generation**: Seamless data capture for beta waitlists.
+- **Responsive Design**: Optimized for 4K Kiosks, Desktops, and Tablets.
 
-## Run Locally
+## 🛠️ Tech Stack
 
-**Prerequisites:**  Node.js
+- **Frontend**: React 18, TypeScript, Tailwind CSS, Framer Motion.
+- **Charts**: TradingView Advanced Chart Widget.
+- **Icons**: Lucide React.
+- **Deployment**: Vercel / GitHub Pages.
 
+## 📦 Setup & Installation
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+1. **Clone & Install**:
+   ```bash
+   npm install
+   ```
+2. **Local Development**:
+   ```bash
+   npm run dev
+   ```
+3. **Environment**:
+   Set `GEMINI_API_KEY` in `.env.local` for future AI-driven features.
+
+## 📅 Roadmap
+
+- [x] Phase 1: MVP Core Loop (Single Player).
+- [x] Phase 2: Design Overhaul (White & Blue) & Content Expansion.
+- [/] Phase 3: Multiplayer Backend (Socket.io).
+- [ ] Phase 4: Real-time Data Feed Integration.
+
+---
+View your app in AI Studio: [Aethera Apex App](https://ai.studio/apps/b353b59d-4239-4c44-887b-07d2d74d19c0)
